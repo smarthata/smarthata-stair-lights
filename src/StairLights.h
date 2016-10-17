@@ -14,10 +14,17 @@
 #define COLOR_ORDER BRG
 #define NUM_LEDS    10
 
-#define BRIGHTNESS  96
+#define BRIGHTNESS  255
 
 class StairLights {
 public:
+
+    static const int STAIRS_COUNT = 5;
+    static const int LEDS_ON_STAIR = 2;
+    static const int WAVE_SPEED = 1000;
+    static const int WAVE_STAIRS = 2;
+
+    static const int MAX_POWER = 100;
 
     StairLights() {
         FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
@@ -26,14 +33,35 @@ public:
     }
 
     void loop() {
-        led.set(modeButton.read());
-
+        if (testRun.isReady()) {
+            sw.start();
+        }
         if (main.isReady()) {
-            if (okButton.read()) {
-                for (int j = 0; j < NUM_LEDS; ++j) {
-                    leds[j] = CRGB(255 * rand(), 255 * rand(), 255 * rand());
-                }
-                FastLED.show();
+            show();
+        }
+    }
+
+    void show() {
+        FastLED.clearData();
+        unsigned long time = sw.time();
+        int lastStair = (int) (time / WAVE_SPEED);
+        byte lastPower = (byte) map(time % WAVE_SPEED, 0, WAVE_SPEED, 0, MAX_POWER);
+
+        highlightStair(lastStair, lastPower);
+
+        int firstStair = lastStair - WAVE_STAIRS;
+        highlightStair(firstStair, MAX_POWER - lastPower);
+
+        for (int stair = firstStair + 1; stair < lastStair; ++stair) {
+            highlightStair(stair, MAX_POWER);
+        }
+        FastLED.show();
+    }
+
+    void highlightStair(int stair, byte power) {
+        if (stair >= 0 && stair < STAIRS_COUNT) {
+            for (int led = 0; led < LEDS_ON_STAIR; ++led) {
+                leds[stair * LEDS_ON_STAIR + led] = CRGB(power, power, power);
             }
         }
     }
@@ -41,10 +69,12 @@ public:
 private:
     ButtonSafe okButton = ButtonSafe(new ButtonPullUp(BUTTON_PIN_OK));
     ButtonSafe modeButton = ButtonSafe(new ButtonPullUp(BUTTON_PIN_MODE));
-    Led led = Led(LED_PIN);
+    Led builtInLed = Led(LED_PIN);
     CRGB leds[NUM_LEDS];
 
-    Interval main = Interval(50);
+    Interval main = Interval(20);
+    Interval testRun = Interval(7500);
+    Stopwatch sw = Stopwatch();
 };
 
 #endif
