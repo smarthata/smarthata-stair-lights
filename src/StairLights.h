@@ -5,9 +5,9 @@
 #include <ButtonSafe.h>
 #include <Led.h>
 
-#define BUTTON_PIN_OK A5
+#define BUTTON_PIN_OK   A5
 #define BUTTON_PIN_MODE A6
-#define LED_PIN 13
+#define LED_PIN         13
 
 #define DATA_PIN    7
 #define LED_TYPE    WS2811
@@ -42,7 +42,7 @@ public:
     }
 
     void show() {
-        FastLED.clearData();
+        clear();
         unsigned long time = sw.time();
         int lastStair = (int) (time / WAVE_SPEED);
         byte lastPower = (byte) map(time % WAVE_SPEED, 0, WAVE_SPEED, 0, MAX_POWER);
@@ -56,6 +56,12 @@ public:
             highlightStair(stair, MAX_POWER);
         }
         FastLED.show();
+    }
+
+    void clear() {
+        for (int led = 0; led < NUM_LEDS; ++led) {
+            leds[led] = CRGB::Black;
+        }
     }
 
     void highlightStair(int stair, byte power) {
