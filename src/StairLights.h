@@ -35,6 +35,7 @@ public:
     static const int WAVE_SPEED = 1000;
     static const int WAVE_STAIRS = 5;
     static const int WAVE_MAX_COUNT = 20;
+    static const int WAVE_TIMEOUT = (STAIRS_COUNT + WAVE_STAIRS) * WAVE_SPEED;
 
     static const int BRIGHTNESS = 255;
     static const int MAX_POWER = 100;
@@ -67,6 +68,8 @@ public:
                 processWave(waves[wave]);
             }
         }
+
+        removeExpiredWave();
 
         FastLED.show();
     }
@@ -122,6 +125,24 @@ public:
             wave.start = millis();
             waveCount++;
         }
+    }
+
+    void removeExpiredWave() {
+        if (waveCount > 0 && isWaveExpired(waves[0])) {
+            moveWavesToTop();
+            waveCount--;
+        }
+    }
+
+    void moveWavesToTop() {
+        for (int wave = 1; wave < waveCount; ++wave) {
+            waves[wave - 1].direction = waves[wave].direction;
+            waves[wave - 1].start = waves[wave].start;
+        }
+    }
+
+    bool isWaveExpired(Wave &wave) const {
+        return millis() - wave.start > WAVE_TIMEOUT;
     }
 
     void checkInterruptSensors() {
