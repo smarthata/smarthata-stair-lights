@@ -4,6 +4,7 @@
 #include <FastLED.h>
 #include <ButtonSafe.h>
 #include <Led.h>
+#include <Ultrasonic.h>
 
 #define BUTTON_PIN_OK   A5
 #define BUTTON_PIN_MODE A6
@@ -37,6 +38,8 @@ public:
     static const int MAX_POWER = 100;
     static const int DUTY_POWER = 10;
 
+    static const int SAVE_INTERVAL = 3;
+
     StairLights() {
         FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
         FastLED.setBrightness(BRIGHTNESS);
@@ -49,6 +52,7 @@ public:
             addWave(TOP);
         }
         if (main.isReady()) {
+            checkDistanceSensors();
             show();
         }
     }
@@ -118,6 +122,17 @@ public:
         }
     }
 
+    void checkDistanceSensors() {
+        if (swBottom.isMoreThanSec(SAVE_INTERVAL) && bottom.getDistance() < 150) {
+            addWave(TOP);
+            swBottom.start();
+        }
+        if (swTop.isMoreThanSec(SAVE_INTERVAL) && top.getDistance() < 150) {
+            addWave(BOTTOM);
+            swTop.start();
+        }
+    }
+
 private:
     ButtonSafe okButton = ButtonSafe(new ButtonPullUp(BUTTON_PIN_OK));
     ButtonSafe modeButton = ButtonSafe(new ButtonPullUp(BUTTON_PIN_MODE));
@@ -129,6 +144,12 @@ private:
 
     Wave waves[WAVE_MAX_COUNT];
     int waveCount = 0;
+
+    Ultrasonic bottom = Ultrasonic(8, 9);
+    Ultrasonic top = Ultrasonic(10, 11);
+
+    Stopwatch swBottom = Stopwatch();
+    Stopwatch swTop = Stopwatch();
 };
 
 #endif
