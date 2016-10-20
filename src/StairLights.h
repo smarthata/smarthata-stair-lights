@@ -12,19 +12,20 @@
 #define DATA_PIN    7
 #define LED_TYPE    WS2811
 #define COLOR_ORDER BRG
-#define NUM_LEDS    10
-
-#define BRIGHTNESS  255
 
 class StairLights {
 public:
 
-    static const int STAIRS_COUNT = 5;
-    static const int LEDS_ON_STAIR = 2;
-    static const int WAVE_SPEED = 1000;
-    static const int WAVE_STAIRS = 2;
+    static const int STAIRS_COUNT = 15;
+    static const int LEDS_ON_STAIR = 10;
+    static const int NUM_LEDS = STAIRS_COUNT * LEDS_ON_STAIR;
 
+    static const int WAVE_SPEED = 1000;
+    static const int WAVE_STAIRS = 5;
+
+    static const int BRIGHTNESS = 255;
     static const int MAX_POWER = 100;
+    static const int DUTY_POWER = 10;
 
     StairLights() {
         FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
@@ -43,6 +44,9 @@ public:
 
     void show() {
         clear();
+
+        showDutyLights();
+
         unsigned long time = sw.time();
         int lastStair = (int) (time / WAVE_SPEED);
         byte lastPower = (byte) map(time % WAVE_SPEED, 0, WAVE_SPEED, 0, MAX_POWER);
@@ -64,10 +68,18 @@ public:
         }
     }
 
+    void showDutyLights() {
+        highlightStair(0, DUTY_POWER);
+        highlightStair(STAIRS_COUNT - 1, DUTY_POWER);
+    }
+
     void highlightStair(int stair, byte power) {
         if (stair >= 0 && stair < STAIRS_COUNT) {
             for (int led = 0; led < LEDS_ON_STAIR; ++led) {
-                leds[stair * LEDS_ON_STAIR + led] = CRGB(power, power, power);
+                CRGB &crgb = leds[stair * LEDS_ON_STAIR + led];
+                crgb.r = max(crgb.r, power);
+                crgb.g = max(crgb.g, power);
+                crgb.b = max(crgb.b, power);
             }
         }
     }
@@ -79,7 +91,7 @@ private:
     CRGB leds[NUM_LEDS];
 
     Interval main = Interval(20);
-    Interval testRun = Interval(7500);
+    Interval testRun = Interval(20000);
     Stopwatch sw = Stopwatch();
 };
 
