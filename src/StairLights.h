@@ -5,10 +5,12 @@
 #include <ButtonSafe.h>
 #include <Led.h>
 #include "InterruptSensor.h"
+#include "LightSensor.h"
 
-#define BUTTON_PIN_OK   A5
-#define BUTTON_PIN_MODE A6
-#define LED_PIN         13
+#define BUTTON_PIN_OK    A5
+#define BUTTON_PIN_MODE  A6
+#define LIGHT_SENSOR_PIN A7
+#define LED_PIN          13
 
 #define DATA_PIN    7
 #define LED_TYPE    WS2811
@@ -58,10 +60,12 @@ public:
     void show() {
         clear();
 
-        showDutyLights();
+        if (lightSensor.isNight()) {
+            showDutyLights();
 
-        for (int wave = 0; wave < waveCount; ++wave) {
-            processWave(waves[wave]);
+            for (int wave = 0; wave < waveCount; ++wave) {
+                processWave(waves[wave]);
+            }
         }
 
         FastLED.show();
@@ -143,6 +147,8 @@ private:
 
     InterruptSensor bottom = InterruptSensor(Ultrasonic(8, 9));
     InterruptSensor top = InterruptSensor(Ultrasonic(10, 11));
+
+    LightSensor lightSensor = LightSensor(LIGHT_SENSOR_PIN);
 
 };
 
