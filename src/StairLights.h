@@ -13,6 +13,15 @@
 #define LED_TYPE    WS2811
 #define COLOR_ORDER BRG
 
+enum Direction {
+    BOTTOM, TOP
+};
+
+struct Wave {
+    Direction direction;
+    unsigned long start;
+};
+
 class StairLights {
 public:
 
@@ -22,6 +31,7 @@ public:
 
     static const int WAVE_SPEED = 1000;
     static const int WAVE_STAIRS = 5;
+    static const int WAVE_MAX_COUNT = 20;
 
     static const int BRIGHTNESS = 255;
     static const int MAX_POWER = 100;
@@ -35,7 +45,8 @@ public:
 
     void loop() {
         if (testRun.isReady()) {
-            sw.start();
+            addWave(BOTTOM);
+            addWave(TOP);
         }
         if (main.isReady()) {
             show();
@@ -47,9 +58,24 @@ public:
 
         showDutyLights();
 
-        unsigned long time = sw.time();
-        int lastStair = (int) (time / WAVE_SPEED);
-        byte lastPower = (byte) map(time % WAVE_SPEED, 0, WAVE_SPEED, 0, MAX_POWER);
+        for (int wave = 0; wave < waveCount; ++wave) {
+            processWave(waves[wave]);
+        }
+
+        FastLED.show();
+    }
+
+    void processWave(Wave wave) {
+        unsigned long time = millis() - wave.start;
+        int lastStair = 0;
+        byte lastPower;
+        if (wave.direction == TOP) {
+            lastStair = (int) (time / WAVE_SPEED);
+            lastPower = (byte) map(time % WAVE_SPEED, 0, WAVE_SPEED, 0, MAX_POWER);
+        } else {
+            lastStair = STAIRS_COUNT + WAVE_STAIRS - 1 - (int) (time / WAVE_SPEED);
+            lastPower = (byte) map(time % WAVE_SPEED, WAVE_SPEED, 0, 0, MAX_POWER);
+        }
 
         highlightStair(lastStair, lastPower);
 
@@ -59,7 +85,6 @@ public:
         for (int stair = firstStair + 1; stair < lastStair; ++stair) {
             highlightStair(stair, MAX_POWER);
         }
-        FastLED.show();
     }
 
     void clear() {
@@ -84,6 +109,15 @@ public:
         }
     }
 
+    void addWave(Direction direction) {
+        if (waveCount < WAVE_MAX_COUNT) {
+            Wave &wave = waves[waveCount];
+            wave.direction = direction;
+            wave.start = millis();
+            waveCount++;
+        }
+    }
+
 private:
     ButtonSafe okButton = ButtonSafe(new ButtonPullUp(BUTTON_PIN_OK));
     ButtonSafe modeButton = ButtonSafe(new ButtonPullUp(BUTTON_PIN_MODE));
@@ -92,7 +126,9 @@ private:
 
     Interval main = Interval(20);
     Interval testRun = Interval(20000);
-    Stopwatch sw = Stopwatch();
+
+    Wave waves[WAVE_MAX_COUNT];
+    int waveCount = 0;
 };
 
 #endif
