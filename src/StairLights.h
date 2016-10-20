@@ -16,6 +16,9 @@
 #define LED_TYPE    WS2811
 #define COLOR_ORDER BRG
 
+const byte stairLeds[] = {10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10};
+byte stairLedIndexes[sizeof(stairLeds)];
+
 enum Direction {
     BOTTOM, TOP
 };
@@ -28,9 +31,7 @@ struct Wave {
 class StairLights {
 public:
 
-    static const int STAIRS_COUNT = 15;
-    static const int LEDS_ON_STAIR = 10;
-    static const int NUM_LEDS = STAIRS_COUNT * LEDS_ON_STAIR;
+    static const int STAIRS_COUNT = sizeof(stairLeds);
 
     static const int WAVE_SPEED = 1000;
     static const int WAVE_STAIRS = 5;
@@ -42,9 +43,22 @@ public:
     static const int DUTY_POWER = 10;
 
     StairLights() {
-        FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+        calculateStairLeds();
+
+        leds = new CRGB[numLeds];
+
+        FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(leds, numLeds).setCorrection(TypicalLEDStrip);
         FastLED.setBrightness(BRIGHTNESS);
         FastLED.show();
+    }
+
+    void calculateStairLeds() {
+        stairLedIndexes[0] = 0;
+        numLeds = stairLeds[0];
+        for (int stair = 1; stair < STAIRS_COUNT; ++stair) {
+            stairLedIndexes[stair] = stairLedIndexes[stair - 1] + stairLeds[stair - 1];
+            numLeds += stairLeds[stair];
+        }
     }
 
     void loop() {
@@ -97,7 +111,7 @@ public:
     }
 
     void clear() {
-        for (int led = 0; led < NUM_LEDS; ++led) {
+        for (int led = 0; led < numLeds; ++led) {
             leds[led] = CRGB::Black;
         }
     }
@@ -109,8 +123,10 @@ public:
 
     void highlightStair(int stair, byte power) {
         if (stair >= 0 && stair < STAIRS_COUNT) {
-            for (int led = 0; led < LEDS_ON_STAIR; ++led) {
-                CRGB &crgb = leds[stair * LEDS_ON_STAIR + led];
+            byte ledsOnStair = stairLeds[stair];
+            byte firstLedIndex = stairLedIndexes[stair];
+            for (int led = 0; led < ledsOnStair; ++led) {
+                CRGB &crgb = leds[firstLedIndex + led];
                 crgb.r = max(crgb.r, power);
                 crgb.g = max(crgb.g, power);
                 crgb.b = max(crgb.b, power);
@@ -158,7 +174,9 @@ private:
     ButtonSafe okButton = ButtonSafe(new ButtonPullUp(BUTTON_PIN_OK));
     ButtonSafe modeButton = ButtonSafe(new ButtonPullUp(BUTTON_PIN_MODE));
     Led builtInLed = Led(LED_PIN);
-    CRGB leds[NUM_LEDS];
+
+    int numLeds;
+    CRGB *leds;
 
     Interval main = Interval(20);
     Interval testRun = Interval(20000);
